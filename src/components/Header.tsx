@@ -11,15 +11,17 @@ import {
   Save,
   CheckCircle2,
   Tv,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Home
 } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  onExitToMenu: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
+export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onExitToMenu }) => {
   const {
     clubs,
     managers,
@@ -61,8 +63,16 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
     <header className="bg-slate-900/95 border-b border-emerald-800/40 sticky top-0 z-40 backdrop-blur shadow-xl">
       {/* Pasek statusu klubu */}
       <div className="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-sm">
-        {/* Lewa strona: Klub i Menedżer */}
+        {/* Lewa strona: Powrót do menu + Klub i Menedżer */}
         <div className="flex items-center gap-3">
+          <button
+            onClick={onExitToMenu}
+            className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-all border border-slate-700"
+            title="Powrót do Menu Głównego"
+          >
+            <Home className="w-4 h-4 text-emerald-400" />
+          </button>
+
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center font-black text-base shadow-md border border-white/20"
             style={{
