@@ -1,5 +1,6 @@
 -- ====================================================================
 -- POLSKA LIGA MANAGER 2026 - SCHEMA & SEED BAZY DANYCH SUPABASE (PostgreSQL)
+-- OFICJALNA STRUKTURA POLSKICH LIG PIŁKARSKICH (POZIOMY I - IX)
 -- ====================================================================
 
 -- 1. TABELA LIG (LEAGUES)
@@ -86,74 +87,145 @@ ALTER TABLE clubs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE game_saves ENABLE ROW LEVEL SECURITY;
 
--- Polityki dostępu (Publiczny odczyt tabel referencyjnych i pełny dostęp do zapisów)
-CREATE POLICY "Public read leagues" ON leagues FOR SELECT USING (true);
-CREATE POLICY "Public read clubs" ON clubs FOR SELECT USING (true);
-CREATE POLICY "Public read players" ON players FOR SELECT USING (true);
-CREATE POLICY "Access game_saves" ON game_saves FOR ALL USING (true) WITH CHECK (true);
+-- Polityki dostępu
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public read leagues') THEN
+    CREATE POLICY "Public read leagues" ON leagues FOR SELECT USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public read clubs') THEN
+    CREATE POLICY "Public read clubs" ON clubs FOR SELECT USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public read players') THEN
+    CREATE POLICY "Public read players" ON players FOR SELECT USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Access game_saves') THEN
+    CREATE POLICY "Access game_saves" ON game_saves FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+END $$;
 
 -- ====================================================================
--- SEED DANYCH POCZĄTKOWYCH (POLSKIE LIGI & KLUBY 2026)
+-- SEED POLSKIEJ STRUKTURY LIGOWEJ (POZIOMY I - IX)
 -- ====================================================================
 
--- Wstawienie Lig
 INSERT INTO leagues (id, name, short_name, tier, relegation_spots, promotion_spots, playoff_spots) VALUES
 ('ekstraklasa', 'PKO BP Ekstraklasa', 'EKS', 1, 3, 0, 0),
 ('pierwsza_liga', 'Betclic 1. Liga', '1L', 2, 3, 2, 4),
 ('druga_liga', 'Betclic 2. Liga', '2L', 3, 4, 2, 4),
 ('trzecia_liga', 'Betclic 3. Liga (Gr. IV)', '3L', 4, 3, 1, 0),
-('okregowka', 'Klasa Okręgowa (Regionalna)', 'OKR', 5, 2, 1, 2)
-ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+('czwarta_liga', 'IV Liga Wojewódzka', '4L', 5, 3, 1, 2),
+('v_liga_okregowka', 'V Liga / Klasa Okręgowa', '5L', 6, 2, 1, 2),
+('klasa_a', 'Klasa A (Regionalna)', 'KL-A', 7, 2, 1, 1),
+('klasa_b_warszawa', 'Klasa B (Warszawa I)', 'KB-WA1', 8, 1, 2, 0),
+('klasa_b_siedlce', 'Klasa B (Siedlce)', 'KB-SIE', 8, 1, 2, 0),
+('klasa_b_katowice', 'Klasa B (Katowice)', 'KB-KAT', 8, 1, 2, 0),
+('klasa_b_sosnowiec', 'Klasa B (Sosnowiec)', 'KB-SOS', 8, 1, 2, 0),
+('klasa_b_krakow', 'Klasa B (Kraków I)', 'KB-KR1', 8, 1, 2, 0),
+('klasa_b_legnica', 'Klasa B (Legnica I)', 'KB-LEG', 8, 1, 2, 0),
+('klasa_b_poznan', 'Klasa B (Poznań I)', 'KB-POZ', 8, 1, 2, 0),
+('klasa_b_lodz', 'Klasa B (Łódź I)', 'KB-LOD', 8, 1, 2, 0),
+('klasa_c_zabrze', 'Klasa C (Grupa Zabrze)', 'KC-ZAB', 9, 0, 2, 0),
+('klasa_c_raciborz', 'Klasa C (Grupa Racibórz)', 'KC-RAC', 9, 0, 2, 0)
+ON CONFLICT (id) DO UPDATE SET 
+  name = EXCLUDED.name,
+  short_name = EXCLUDED.short_name,
+  tier = EXCLUDED.tier;
 
--- Wstawienie Klubów Ekstraklasy
-INSERT INTO clubs (id, name, short_name, city, league_id, primary_color, secondary_color, reputation, stadium_capacity, stadium_seated, has_floodlights, has_heated_pitch, ticket_price, balance, wage_budget, transfer_budget, season_ticket_holders, main_sponsor_weekly, stadium_bands_weekly, tv_rights_weekly) VALUES
-('lech_poznan', 'Lech Poznań', 'LPO', 'Poznań', 'ekstraklasa', '#0055A5', '#FFFFFF', 88, 42837, 42837, true, true, 65, 18500000, 420000, 8500000, 14500, 85000, 45000, 95000),
-('legia_warszawa', 'Legia Warszawa', 'LEG', 'Warszawa', 'ekstraklasa', '#006837', '#FFFFFF', 89, 31103, 31103, true, true, 70, 16000000, 450000, 7500000, 13000, 90000, 50000, 95000),
-('rakow_czestochowa', 'Raków Częstochowa', 'RCZ', 'Częstochowa', 'ekstraklasa', '#C8102E', '#002B49', 86, 5500, 5500, true, true, 55, 14000000, 380000, 6000000, 4200, 80000, 35000, 90000),
-('jagiellonia_bialystok', 'Jagiellonia Białystok', 'JAG', 'Białystok', 'ekstraklasa', '#FDD017', '#C8102E', 85, 22372, 22372, true, true, 50, 12000000, 320000, 5000000, 9500, 75000, 35000, 90000),
-('pogon_szczecin', 'Pogoń Szczecin', 'POG', 'Szczecin', 'ekstraklasa', '#002B49', '#861F41', 84, 21163, 21163, true, true, 55, 9500000, 310000, 4200000, 10500, 70000, 32000, 85000),
-('gornik_zabrze', 'Górnik Zabrze', 'GOR', 'Zabrze', 'ekstraklasa', '#002B49', '#FFFFFF', 82, 24563, 24563, true, true, 45, 6500000, 260000, 2800000, 11000, 60000, 30000, 80000),
-('cracovia', 'Cracovia', 'CRA', 'Kraków', 'ekstraklasa', '#C8102E', '#FFFFFF', 81, 15114, 15114, true, true, 45, 8000000, 270000, 3500000, 7200, 65000, 28000, 80000),
-('widzew_lodz', 'Widzew Łódź', 'WID', 'Łódź', 'ekstraklasa', '#C8102E', '#FFFFFF', 83, 18018, 18018, true, true, 50, 9000000, 290000, 3800000, 16000, 68000, 35000, 82000),
-('gks_katowice', 'GKS Katowice', 'GKS', 'Katowice', 'ekstraklasa', '#F59E0B', '#000000', 77, 14896, 14896, true, true, 40, 4500000, 190000, 1800000, 6500, 45000, 20000, 75000),
-('lechia_gdansk', 'Lechia Gdańsk', 'LGD', 'Gdańsk', 'ekstraklasa', '#006837', '#FFFFFF', 79, 41620, 41620, true, true, 45, 4000000, 210000, 1600000, 8500, 50000, 24000, 75000),
-('motor_lublin', 'Motor Lublin', 'MOT', 'Lublin', 'ekstraklasa', '#F59E0B', '#0055A5', 76, 15243, 15243, true, true, 45, 5500000, 200000, 2200000, 9000, 48000, 22000, 75000),
-('zaglebie_lubin', 'Zagłębie Lubin', 'ZAG', 'Lubin', 'ekstraklasa', '#EA580C', '#FFFFFF', 80, 16086, 16086, true, true, 40, 10000000, 280000, 4000000, 4500, 70000, 30000, 78000),
-('piast_gliwice', 'Piast Gliwice', 'PIA', 'Gliwice', 'ekstraklasa', '#0284C7', '#C8102E', 79, 9913, 9913, true, true, 40, 6000000, 220000, 2500000, 4100, 52000, 22000, 76000),
-('radomiak_radom', 'Radomiak Radom', 'RAD', 'Radom', 'ekstraklasa', '#16A34A', '#1E293B', 76, 8840, 8840, true, true, 45, 4000000, 200000, 1800000, 5500, 45000, 20000, 75000),
-('korona_kielce', 'Korona Kielce', 'KOR', 'Kielce', 'ekstraklasa', '#F59E0B', '#C8102E', 77, 15550, 15550, true, true, 40, 4200000, 195000, 1600000, 7000, 45000, 20000, 75000),
-('slask_wroclaw', 'Śląsk Wrocław', 'SLA', 'Wrocław', 'ekstraklasa', '#006837', '#C8102E', 81, 45105, 45105, true, true, 45, 6500000, 250000, 2800000, 11000, 60000, 28000, 78000),
-('puszcza_niepolomice', 'Puszcza Niepołomice', 'PUS', 'Niepołomice', 'ekstraklasa', '#2563EB', '#FFFFFF', 74, 4500, 4500, true, true, 40, 3500000, 160000, 1200000, 2200, 38000, 16000, 72000),
-('stal_mielec', 'Stal Mielec', 'SMI', 'Mielec', 'ekstraklasa', '#0284C7', '#FFFFFF', 75, 6864, 6864, true, true, 40, 3800000, 175000, 1400000, 3800, 40000, 18000, 73000)
-ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+-- ====================================================================
+-- SEED KLUBÓW KLASY B (VIII SZCZEBEL)
+-- ====================================================================
 
--- Wstawienie Klubów 1. Ligi
 INSERT INTO clubs (id, name, short_name, city, league_id, primary_color, secondary_color, reputation, stadium_capacity, stadium_seated, has_floodlights, has_heated_pitch, ticket_price, balance, wage_budget, transfer_budget, season_ticket_holders, main_sponsor_weekly, stadium_bands_weekly, tv_rights_weekly) VALUES
-('wisla_krakow', 'Wisła Kraków', 'WIS', 'Kraków', 'pierwsza_liga', '#C8102E', '#002B49', 83, 33130, 33130, true, true, 45, 7500000, 240000, 3000000, 15500, 55000, 30000, 35000),
-('ruch_chorzow', 'Ruch Chorzów', 'RUC', 'Chorzów', 'pierwsza_liga', '#0055A5', '#FFFFFF', 80, 54378, 54378, true, true, 40, 5500000, 210000, 2000000, 14000, 48000, 25000, 35000),
-('arka_gdynia', 'Arka Gdynia', 'ARK', 'Gdynia', 'pierwsza_liga', '#F59E0B', '#002B49', 79, 15139, 15139, true, true, 40, 5000000, 190000, 1800000, 8000, 42000, 22000, 35000),
-('brukbet_termalica', 'Bruk-Bet Termalica Nieciecza', 'BBT', 'Nieciecza', 'pierwsza_liga', '#EA580C', '#0284C7', 76, 4666, 4666, true, true, 35, 7000000, 220000, 2500000, 28000, 50000, 20000, 35000),
-('miedz_legnica', 'Miedź Legnica', 'MIE', 'Legnica', 'pierwsza_liga', '#0284C7', '#16A34A', 76, 6194, 6194, true, true, 35, 4500000, 170000, 1500000, 3200, 38000, 18000, 35000),
-('polonia_warszawa', 'Polonia Warszawa', 'PWA', 'Warszawa', 'pierwsza_liga', '#000000', '#C8102E', 77, 7150, 7150, true, true, 40, 4800000, 180000, 1600000, 3500, 40000, 20000, 35000),
-('lks_lodz', 'ŁKS Łódź', 'LKS', 'Łódź', 'pierwsza_liga', '#FFFFFF', '#C8102E', 78, 18029, 18029, true, true, 35, 4200000, 175000, 1400000, 7000, 40000, 20000, 35000),
-('wisla_plock', 'Wisła Płock', 'WPL', 'Płock', 'pierwsza_liga', '#0055A5', '#FFFFFF', 78, 15004, 15004, true, true, 35, 5200000, 190000, 1900000, 5500, 45000, 22000, 35000),
-('gornik_leczna', 'Górnik Łęczna', 'GLE', 'Łęczna', 'pierwsza_liga', '#16A34A', '#000000', 75, 7464, 7464, true, true, 30, 3800000, 150000, 1200000, 2500, 35000, 16000, 35000),
-('znicz_pruszkow', 'Znicz Pruszków', 'ZNI', 'Pruszków', 'pierwsza_liga', '#F59E0B', '#C8102E', 72, 2000, 2000, true, false, 30, 2200000, 110000, 600000, 1200, 25000, 12000, 35000),
-('chrobry_glogow', 'Chrobry Głogów', 'CHG', 'Głogów', 'pierwsza_liga', '#EA580C', '#000000', 72, 2817, 2817, true, true, 30, 2500000, 120000, 700000, 1500, 28000, 14000, 35000),
-('kotwica_kolobrzeg', 'Kotwica Kołobrzeg', 'KOT', 'Kołobrzeg', 'pierwsza_liga', '#0055A5', '#FFFFFF', 71, 3014, 3014, true, true, 30, 2000000, 115000, 500000, 1600, 26000, 12000, 35000),
-('odra_opole', 'Odra Opole', 'ODR', 'Opole', 'pierwsza_liga', '#0055A5', '#C8102E', 74, 11600, 11600, true, true, 35, 3500000, 150000, 1100000, 4500, 35000, 18000, 35000),
-('warta_poznan', 'Warta Poznań', 'WAR', 'Poznań', 'pierwsza_liga', '#16A34A', '#FFFFFF', 74, 5383, 5383, true, true, 30, 2800000, 135000, 800000, 2200, 30000, 15000, 35000),
-('stal_rzeszow', 'Stal Rzeszów', 'SRZ', 'Rzeszów', 'pierwsza_liga', '#0055A5', '#FFFFFF', 73, 11547, 11547, true, true, 30, 3200000, 140000, 950000, 3500, 32000, 16000, 35000),
-('pogon_siedlce', 'Pogoń Siedlce', 'PSI', 'Siedlce', 'pierwsza_liga', '#0055A5', '#FFFFFF', 70, 2901, 2901, true, true, 25, 1800000, 95000, 400000, 1400, 22000, 10000, 35000),
-('gks_tychy', 'GKS Tychy', 'TYC', 'Tychy', 'pierwsza_liga', '#16A34A', '#C8102E', 75, 15150, 15150, true, true, 35, 4000000, 160000, 1300000, 5000, 36000, 18000, 35000),
-('stal_stalowa_wola', 'Stal Stalowa Wola', 'SSW', 'Stalowa Wola', 'pierwsza_liga', '#16A34A', '#000000', 70, 3764, 3764, true, true, 25, 1900000, 100000, 450000, 1800, 24000, 11000, 35000)
-ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+-- MAZOWIECKIE - WARSZAWA I
+('blyskawica_warszawa', 'Błyskawica Warszawa', 'BLW', 'Warszawa', 'klasa_b_warszawa', '#0055A5', '#FFFFFF', 44, 600, 200, false, false, 8, 60000, 5500, 5000, 50, 700, 150, 300),
+('impet_lajski', 'Impet Łajski', 'IMP', 'Łajski', 'klasa_b_warszawa', '#16A34A', '#FFFFFF', 42, 400, 150, false, false, 8, 50000, 4800, 4000, 40, 600, 120, 300),
+('lider_zakroczym', 'Lider Zakroczym', 'LID', 'Zakroczym', 'klasa_b_warszawa', '#F59E0B', '#000000', 43, 500, 180, false, false, 8, 55000, 5000, 4500, 45, 650, 140, 300),
+('mewa_krubin', 'Mewa Krubin', 'MEW', 'Krubin', 'klasa_b_warszawa', '#0284C7', '#FFFFFF', 41, 400, 120, false, false, 8, 48000, 4500, 3500, 35, 550, 100, 300),
+('wisla_jablonna', 'Wisła Jabłonna', 'WJA', 'Jabłonna', 'klasa_b_warszawa', '#0055A5', '#C8102E', 44, 650, 250, true, false, 8, 65000, 5800, 5500, 55, 750, 180, 300),
+('rzadza_zalubice', 'Rządza Załubice', 'RZA', 'Załubice', 'klasa_b_warszawa', '#16A34A', '#F59E0B', 42, 450, 150, false, false, 8, 52000, 4800, 4000, 40, 600, 120, 300),
+('lotnisko_modlin', 'Lotnisko Modlin', 'LMO', 'Nowy Dwór Maz.', 'klasa_b_warszawa', '#0055A5', '#F59E0B', 45, 800, 300, true, false, 8, 70000, 6200, 6000, 70, 800, 200, 300),
+('apjd_lomianki', 'APJD Łomianki', 'LOM', 'Łomianki', 'klasa_b_warszawa', '#C8102E', '#000000', 43, 550, 200, false, false, 8, 56000, 5100, 4500, 45, 660, 150, 300),
+('aon_rembertow', 'AON Rembertów', 'AON', 'Warszawa', 'klasa_b_warszawa', '#006837', '#FFFFFF', 44, 600, 250, false, false, 8, 62000, 5500, 5000, 50, 700, 160, 300),
+('bor_regut', 'Bór Regut', 'BOR', 'Regut', 'klasa_b_warszawa', '#16A34A', '#000000', 42, 450, 150, false, false, 8, 50000, 4700, 4000, 40, 580, 120, 300),
+('gks_dabrowka', 'GKS Dąbrówka', 'DAB', 'Dąbrówka', 'klasa_b_warszawa', '#F59E0B', '#0055A5', 41, 400, 120, false, false, 8, 48000, 4500, 3500, 35, 550, 100, 300),
+('wisla_dziecinow', 'Wisła Dziecinów', 'WIE', 'Dziecinów', 'klasa_b_warszawa', '#0284C7', '#C8102E', 42, 450, 150, false, false, 8, 51000, 4700, 4000, 40, 590, 120, 300),
 
--- Wstawienie Przykładowych Klubów Niższych Lig (2L, 3L, Okręgówka)
-INSERT INTO clubs (id, name, short_name, city, league_id, primary_color, secondary_color, reputation, stadium_capacity, stadium_seated, has_floodlights, has_heated_pitch, ticket_price, balance, wage_budget, transfer_budget, season_ticket_holders, main_sponsor_weekly, stadium_bands_weekly, tv_rights_weekly) VALUES
-('wieczysta_krakow', 'Wieczysta Kraków', 'WIE', 'Kraków', 'druga_liga', '#F59E0B', '#000000', 74, 2000, 2000, true, false, 35, 12000000, 280000, 5000000, 1500, 80000, 30000, 10000),
-('polonia_bytom', 'Polonia Bytom', 'PBY', 'Bytom', 'druga_liga', '#0055A5', '#C8102E', 71, 2220, 2220, true, true, 25, 2200000, 90000, 500000, 1800, 20000, 9000, 10000),
-('siarka_tarnobrzeg', 'Siarka Tarnobrzeg', 'SIA', 'Tarnobrzeg', 'trzecia_liga', '#16A34A', '#F59E0B', 64, 3770, 3770, true, false, 15, 800000, 42000, 120000, 700, 8000, 3000, 2000),
-('mazur_karczew', 'Mazur Karczew', 'MKR', 'Karczew', 'okregowka', '#C8102E', '#FFFFFF', 52, 1200, 600, false, false, 10, 150000, 12000, 15000, 150, 1800, 500, 500),
-('victoria_sulejowek', 'Victoria Sulejówek', 'VSU', 'Sulejówek', 'okregowka', '#16A34A', '#FFFFFF', 54, 1500, 800, true, false, 10, 200000, 15000, 25000, 220, 2200, 700, 500)
-ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+-- MAZOWIECKIE - SIEDLCE
+('jastrzab_zeliszew', 'Jastrząb Żeliszew', 'JZE', 'Żeliszew', 'klasa_b_siedlce', '#0055A5', '#FFFFFF', 42, 400, 150, false, false, 8, 48000, 4500, 3500, 35, 550, 100, 300),
+('grom_kazanow', 'Grom Kazanów', 'GKA', 'Kazanów', 'klasa_b_siedlce', '#16A34A', '#FFFFFF', 41, 350, 120, false, false, 8, 45000, 4200, 3000, 30, 500, 90, 300),
+('lks_ostrowek', 'LKS Ostrówek', 'OST', 'Ostrówek', 'klasa_b_siedlce', '#F59E0B', '#16A34A', 42, 400, 150, false, false, 8, 49000, 4600, 3800, 40, 560, 110, 300),
+('zorza_sterdyn', 'Zorza Sterdyń', 'ZST', 'Sterdyń', 'klasa_b_siedlce', '#C8102E', '#FFFFFF', 41, 350, 120, false, false, 8, 44000, 4200, 3000, 30, 500, 90, 300),
+('amazonka_wisniew', 'Amazonka Wiśniew', 'AMW', 'Wiśniew', 'klasa_b_siedlce', '#16A34A', '#000000', 43, 500, 180, false, false, 8, 54000, 4900, 4200, 45, 620, 130, 300),
+('kolektyw_olesnica', 'Kolektyw Oleśnica', 'KOL', 'Oleśnica', 'klasa_b_siedlce', '#0055A5', '#F59E0B', 42, 450, 150, false, false, 8, 50000, 4700, 3900, 40, 580, 120, 300),
+('polonez_mordy', 'Polonez Mordy', 'PMO', 'Mordy', 'klasa_b_siedlce', '#C8102E', '#0055A5', 43, 500, 180, false, false, 8, 53000, 4800, 4100, 45, 600, 130, 300),
+('grodzisk_sabnie', 'Grodzisk Sabnie', 'GSA', 'Sabnie', 'klasa_b_siedlce', '#006837', '#FFFFFF', 41, 380, 120, false, false, 8, 46000, 4300, 3200, 35, 520, 100, 300),
+
+-- ŚLĄSKIE - KATOWICE
+('mk_gornik_2_katowice', 'MK Górnik II Katowice', 'MK2', 'Katowice', 'klasa_b_katowice', '#0055A5', '#FFFFFF', 44, 600, 200, false, false, 8, 60000, 5500, 5000, 50, 700, 150, 300),
+('uks_szopienice', 'UKS Szopienice', 'SZO', 'Katowice', 'klasa_b_katowice', '#16A34A', '#F59E0B', 43, 500, 180, false, false, 8, 54000, 5000, 4200, 45, 620, 130, 300),
+('hetman_22_katowice', 'Hetman 22 Katowice', 'HET', 'Katowice', 'klasa_b_katowice', '#C8102E', '#FFFFFF', 43, 550, 200, false, false, 8, 56000, 5100, 4500, 45, 650, 140, 300),
+('gornik_wesola', 'Górnik Wesoła', 'WES', 'Mysłowice', 'klasa_b_katowice', '#16A34A', '#000000', 44, 650, 250, false, false, 8, 62000, 5600, 5200, 55, 720, 160, 300),
+('naprzod_2_lipiny', 'Naprzód II Lipiny', 'LIP', 'Świętochłowice', 'klasa_b_katowice', '#0055A5', '#C8102E', 42, 450, 150, false, false, 8, 50000, 4700, 3800, 40, 580, 120, 300),
+('jastrzab_2_bielszowice', 'Jastrząb II Bielszowice', 'JBI', 'Ruda Śląska', 'klasa_b_katowice', '#0055A5', '#16A34A', 42, 450, 150, false, false, 8, 49000, 4600, 3700, 40, 560, 110, 300),
+('slawia_2_ruda_slaska', 'Sławia II Ruda Śląska', 'SLA', 'Ruda Śląska', 'klasa_b_katowice', '#006837', '#FFFFFF', 43, 500, 180, false, false, 8, 53000, 4900, 4100, 45, 610, 130, 300),
+('siemianowiczanka_2', 'Siemianowiczanka II', 'SIE', 'Siemianowice Śl.', 'klasa_b_katowice', '#C8102E', '#000000', 43, 550, 200, false, false, 8, 55000, 5000, 4300, 45, 630, 140, 300),
+
+-- ŚLĄSKIE - SOSNOWIEC
+('zaglebie_2_sosnowiec_amat', 'Zagłębie II Sosnowiec (Amatorska)', 'ZSA', 'Sosnowiec', 'klasa_b_sosnowiec', '#C8102E', '#FFFFFF', 45, 800, 300, true, false, 8, 70000, 6200, 6000, 65, 800, 200, 300),
+('gornik_2_piaski', 'Górnik II Piaski', 'GPI', 'Czeladź', 'klasa_b_sosnowiec', '#16A34A', '#000000', 42, 450, 150, false, false, 8, 50000, 4700, 3800, 40, 580, 120, 300),
+('sks_2_choszczowka', 'SKS II Choszczówka', 'SK2', 'Sosnowiec', 'klasa_b_sosnowiec', '#0055A5', '#F59E0B', 41, 400, 120, false, false, 8, 47000, 4400, 3400, 35, 540, 100, 300),
+('promien_strzemieszyce', 'Promień Strzemieszyce Małe', 'PSM', 'Dąbrowa Górnicza', 'klasa_b_sosnowiec', '#F59E0B', '#000000', 43, 500, 180, false, false, 8, 54000, 4900, 4200, 45, 620, 130, 300),
+('zew_kazimierz', 'Zew Kazimierz', 'ZEW', 'Sosnowiec', 'klasa_b_sosnowiec', '#0055A5', '#C8102E', 44, 600, 220, false, false, 8, 59000, 5300, 4800, 50, 680, 150, 300),
+('ceti_boguchwalowice', 'Ceti Boguchwałowice', 'CET', 'Boguchwałowice', 'klasa_b_sosnowiec', '#16A34A', '#FFFFFF', 41, 350, 100, false, false, 8, 45000, 4200, 3000, 30, 500, 90, 300),
+('lks_wysoka', 'LKS Wysoka', 'WYS', 'Wysoka', 'klasa_b_sosnowiec', '#F59E0B', '#C8102E', 42, 400, 150, false, false, 8, 48000, 4500, 3500, 35, 550, 100, 300),
+('blyskawica_preczow', 'Błyskawica Preczów', 'BPR', 'Preczów', 'klasa_b_sosnowiec', '#0284C7', '#FFFFFF', 42, 450, 150, false, false, 8, 51000, 4700, 3900, 40, 580, 120, 300),
+
+-- MAŁOPOLSKIE - KRAKÓW I
+('wawel_krakow', 'Wawel Kraków', 'WAW', 'Kraków', 'klasa_b_krakow', '#0055A5', '#C8102E', 46, 1000, 400, true, false, 10, 80000, 6800, 7500, 80, 900, 250, 300),
+('kolejarz_krakow', 'Kolejarz Kraków', 'KOL', 'Kraków', 'klasa_b_krakow', '#006837', '#FFFFFF', 44, 650, 250, false, false, 8, 64000, 5600, 5300, 55, 740, 170, 300),
+('pychowianka_krakow', 'Pychowianka Kraków', 'PYC', 'Kraków', 'klasa_b_krakow', '#F59E0B', '#000000', 43, 500, 180, false, false, 8, 55000, 5000, 4400, 45, 640, 140, 300),
+('tramwaj_2_krakow', 'Tramwaj II Kraków', 'TR2', 'Kraków', 'klasa_b_krakow', '#C8102E', '#FFFFFF', 43, 550, 200, false, false, 8, 56000, 5100, 4500, 45, 650, 140, 300),
+('blekitni_2_modlnica', 'Błękitni II Modlnica', 'BL2', 'Modlnica', 'klasa_b_krakow', '#0284C7', '#FFFFFF', 42, 450, 150, false, false, 8, 50000, 4700, 3800, 40, 580, 120, 300),
+('niedzwiedz_2', 'Niedźwiedź II', 'ND2', 'Niedźwiedź', 'klasa_b_krakow', '#16A34A', '#000000', 41, 400, 120, false, false, 8, 47000, 4400, 3300, 35, 530, 100, 300),
+('zelkow_2', 'Zelków II', 'ZE2', 'Zelków', 'klasa_b_krakow', '#0055A5', '#FFFFFF', 41, 380, 120, false, false, 8, 46000, 4300, 3200, 35, 520, 100, 300),
+('sankowia_sanka', 'Sankowia Sanka', 'SAN', 'Sanka', 'klasa_b_krakow', '#F59E0B', '#C8102E', 42, 420, 140, false, false, 8, 49000, 4600, 3600, 40, 560, 110, 300),
+
+-- DOLNOŚLĄSKIE - LEGNICA I
+('victoria_siciny', 'Victoria Siciny', 'VSI', 'Siciny', 'klasa_b_legnica', '#16A34A', '#FFFFFF', 42, 400, 150, false, false, 8, 48000, 4500, 3500, 35, 550, 100, 300),
+('sparta_2_grebocice', 'Sparta II Grębocice', 'SP2', 'Grębocice', 'klasa_b_legnica', '#C8102E', '#FFFFFF', 43, 500, 180, false, false, 8, 53000, 4900, 4100, 45, 610, 130, 300),
+('lzs_kozlice', 'LZS Koźlice', 'KOZ', 'Koźlice', 'klasa_b_legnica', '#F59E0B', '#16A34A', 41, 350, 120, false, false, 8, 45000, 4200, 3000, 30, 500, 90, 300),
+('piast_2_rzeczyca', 'Piast II Rzeczyca', 'PRZ', 'Rzeczyca', 'klasa_b_legnica', '#0055A5', '#C8102E', 42, 420, 140, false, false, 8, 49000, 4600, 3600, 40, 560, 110, 300),
+('iskra_nielubia', 'Iskra Nielubia', 'ISK', 'Nielubia', 'klasa_b_legnica', '#0284C7', '#FFFFFF', 41, 380, 120, false, false, 8, 46000, 4300, 3200, 35, 520, 100, 300),
+('ks_klobuczyn', 'KS Kłobuczyn', 'KLO', 'Kłobuczyn', 'klasa_b_legnica', '#16A34A', '#000000', 42, 400, 150, false, false, 8, 48000, 4500, 3500, 35, 550, 100, 300),
+('zryw_2_kotla', 'Zryw II Kotla', 'ZK2', 'Kotla', 'klasa_b_legnica', '#C8102E', '#000000', 41, 350, 100, false, false, 8, 44000, 4200, 3000, 30, 500, 90, 300),
+('perla_potoczek', 'Perła Potoczek', 'PER', 'Potoczek', 'klasa_b_legnica', '#006837', '#FFFFFF', 42, 400, 140, false, false, 8, 47000, 4400, 3400, 35, 540, 100, 300),
+('pogon_2_gora', 'Pogoń II Góra', 'PG2', 'Góra', 'klasa_b_legnica', '#0055A5', '#FFFFFF', 43, 500, 180, false, false, 8, 52000, 4800, 4000, 45, 600, 120, 300),
+('mieszko_ruszowice', 'Mieszko Ruszowice', 'MRU', 'Ruszowice', 'klasa_b_legnica', '#F59E0B', '#000000', 42, 450, 150, false, false, 8, 50000, 4600, 3800, 40, 570, 110, 300),
+
+-- WIELKOPOLSKIE - POZNAŃ I
+('poznan_fc', 'Poznań FC', 'PFC', 'Poznań', 'klasa_b_poznan', '#0055A5', '#FFFFFF', 45, 750, 300, true, false, 8, 70000, 6000, 6000, 65, 780, 190, 300),
+('odlew_poznan', 'Odlew Poznań', 'ODL', 'Poznań', 'klasa_b_poznan', '#C8102E', '#FFFFFF', 44, 600, 250, false, false, 8, 62000, 5500, 5200, 55, 710, 160, 300),
+('hajduk_2_biezdrowo', 'Hajduk II Biezdrowo', 'HB2', 'Biezdrowo', 'klasa_b_poznan', '#16A34A', '#000000', 41, 380, 120, false, false, 8, 46000, 4300, 3200, 35, 520, 100, 300),
+('zloci_zlotkowo', 'Złoci Złotkowo', 'ZZL', 'Złotkowo', 'klasa_b_poznan', '#F59E0B', '#000000', 43, 500, 180, false, false, 8, 54000, 4900, 4200, 45, 620, 130, 300),
+('raki_rozwarzyn', 'Raki Rozwarzyn', 'RRO', 'Rozwarzyn', 'klasa_b_poznan', '#C8102E', '#F59E0B', 42, 420, 140, false, false, 8, 49000, 4600, 3600, 40, 560, 110, 300),
+('orzel_2_rostarzewo', 'Orzeł II Rostarzewo', 'OR2', 'Rostarzewo', 'klasa_b_poznan', '#0055A5', '#C8102E', 42, 450, 150, false, false, 8, 50000, 4700, 3800, 40, 580, 120, 300),
+('warta_2_sierakow', 'Warta II Sieraków', 'WS2', 'Sieraków', 'klasa_b_poznan', '#16A34A', '#FFFFFF', 43, 500, 180, false, false, 8, 53000, 4900, 4100, 45, 610, 130, 300),
+('grom_2_plewiska', 'Grom II Plewiska', 'GR2', 'Plewiska', 'klasa_b_poznan', '#0284C7', '#FFFFFF', 43, 550, 200, false, false, 8, 55000, 5000, 4300, 45, 630, 140, 300),
+
+-- ŁÓDZKIE - ŁÓDŹ I
+('boruta_3_zgierz', 'Boruta III Zgierz', 'BO3', 'Zgierz', 'klasa_b_lodz', '#000000', '#FFFFFF', 43, 500, 180, false, false, 8, 53000, 4900, 4100, 45, 610, 130, 300),
+('stal_2_glowno', 'Stal II Głowno', 'ST2', 'Głowno', 'klasa_b_lodz', '#0055A5', '#F59E0B', 42, 450, 150, false, false, 8, 50000, 4700, 3800, 40, 580, 120, 300),
+('rozwoj_glowno', 'Rozwój Głowno', 'RGL', 'Głowno', 'klasa_b_lodz', '#16A34A', '#FFFFFF', 42, 450, 150, false, false, 8, 51000, 4700, 3900, 40, 590, 120, 300),
+('sokol_lutomiersk', 'Sokół Lutomiersk', 'SLU', 'Lutomiersk', 'klasa_b_lodz', '#006837', '#FFFFFF', 43, 520, 190, false, false, 8, 54000, 4900, 4200, 45, 620, 130, 300),
+('wlokniarz_2_konstantynow', 'Włókniarz II Konstantynów Łódzki', 'WK2', 'Konstantynów Ł.', 'klasa_b_lodz', '#16A34A', '#000000', 43, 500, 180, false, false, 8, 52000, 4800, 4000, 45, 600, 120, 300),
+('kas_2_konstantynow', 'KAS II Konstantynów', 'KA2', 'Konstantynów Ł.', 'klasa_b_lodz', '#0055A5', '#C8102E', 42, 450, 150, false, false, 8, 49000, 4600, 3700, 40, 570, 110, 300),
+('bzura_2_ozorkow', 'Bzura II Ozorków', 'BZ2', 'Ozorków', 'klasa_b_lodz', '#0284C7', '#FFFFFF', 42, 450, 150, false, false, 8, 50000, 4700, 3800, 40, 580, 120, 300),
+('sap_2_parzeczew', 'SAP II Parzęczew', 'SA2', 'Parzęczew', 'klasa_b_lodz', '#F59E0B', '#000000', 41, 400, 120, false, false, 8, 47000, 4400, 3400, 35, 540, 100, 300)
+ON CONFLICT (id) DO UPDATE SET 
+  name = EXCLUDED.name,
+  short_name = EXCLUDED.short_name,
+  city = EXCLUDED.city,
+  league_id = EXCLUDED.league_id,
+  primary_color = EXCLUDED.primary_color,
+  secondary_color = EXCLUDED.secondary_color,
+  reputation = EXCLUDED.reputation;

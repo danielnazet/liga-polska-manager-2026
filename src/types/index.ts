@@ -6,7 +6,7 @@ export type Mentality = 'very_defensive' | 'defensive' | 'balanced' | 'attacking
 
 export type Aggression = 'gentle' | 'normal' | 'aggressive' | 'ruthless';
 
-export type LeagueTier = 1 | 2 | 3 | 4 | 5; // 1: Ekstraklasa, 2: 1. Liga, 3: 2. Liga, 4: 3. Liga, 5: Okręgówka
+export type LeagueTier = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9; // I: Ekstraklasa, II: 1L, III: 2L, IV: 3L, V: 4L, VI: V Liga/Okręgówka, VII: Klasa A, VIII: Klasa B, IX: Klasa C
 
 export interface Player {
   id: string;

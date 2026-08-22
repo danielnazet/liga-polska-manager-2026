@@ -40,26 +40,55 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame }) => {
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  // Wczytanie listy lokalnych zapisów
+  // Wczytanie listy zapisów z Supabase i localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('plm2026_save_game');
-    if (saved) {
+    const fetchSaves = async () => {
+      const list: { id: string; title: string; date: string; source: 'cloud' | 'local'; state: GameState }[] = [];
+
+      // 1. Zapisy z chmury Supabase
       try {
-        const parsed: GameState = JSON.parse(saved);
-        const manager = parsed.managers[0];
-        const club = parsed.clubs[manager?.clubId || ''];
-        setSavedGamesList([
-          {
-            id: parsed.saveId || 'local_save',
-            title: club ? `${club.name} (Sezon ${parsed.currentSeason}, Kol. ${parsed.currentRound})` : 'Zapisana Gra',
-            date: parsed.gameDate || '2026-08-22',
+        const cloudSaves = await (await import('@/lib/supabase')).getAllCloudSaves();
+        cloudSaves.forEach((item) => {
+          const parsed = item.data;
+          const manager = parsed.managers?.[0];
+          const club = parsed.clubs?.[manager?.clubId || ''];
+          list.push({
+            id: item.id,
+            title: club ? `${club.name} (Sezon ${parsed.currentSeason}, Kol. ${parsed.currentRound})` : 'Zapis w Chmurze',
+            date: new Date(item.updated_at).toLocaleString('pl-PL'),
+            source: 'cloud',
             state: parsed,
-          },
-        ]);
-      } catch (err) {
-        console.error(err);
+          });
+        });
+      } catch (e) {
+        console.warn('Supabase fetch saves error:', e);
       }
-    }
+
+      // 2. Zapis lokalny (jeśli inny niż z chmury)
+      const saved = localStorage.getItem('plm2026_save_game');
+      if (saved) {
+        try {
+          const parsed: GameState = JSON.parse(saved);
+          if (!list.some((s) => s.id === parsed.saveId)) {
+            const manager = parsed.managers?.[0];
+            const club = parsed.clubs?.[manager?.clubId || ''];
+            list.push({
+              id: parsed.saveId || 'local_save',
+              title: club ? `${club.name} (Sezon ${parsed.currentSeason}, Kol. ${parsed.currentRound})` : 'Zapis Lokalny',
+              date: parsed.gameDate || '2026-08-22',
+              source: 'local',
+              state: parsed,
+            });
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      setSavedGamesList(list);
+    };
+
+    fetchSaves();
   }, [loadModalOpen]);
 
   const handleLoadGame = (state: GameState) => {
