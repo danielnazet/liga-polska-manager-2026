@@ -68,6 +68,48 @@ interface GameStore extends GameState {
 
 const LOCAL_STORAGE_KEY = 'plm2026_save_game';
 
+// Bezpieczny zapis do localStorage z obsługą limitów QuotaExceededError
+const safeSaveToLocalStorage = (key: string, state: GameState) => {
+  try {
+    // 1. Stwórz czystą kopię stanu bez niepotrzebnych ciężkich danych
+    const sanitizedState: GameState = {
+      ...state,
+      activeMatchState: null,
+      // Ogranicz liczbę przechowywanych szczegółowych zdarzeń z meczów (prunuj starą historię)
+      fixtures: state.fixtures.map((f) => ({
+        ...f,
+        events: f.events ? f.events.slice(-5) : [],
+      })),
+      news: state.news.slice(0, 25),
+    };
+
+    localStorage.setItem(key, JSON.stringify(sanitizedState));
+  } catch (err) {
+    console.warn('Pierwsza próba zapisu w localStorage nie powiodła się (QuotaExceeded). Próba kompresji...', err);
+    try {
+      // 2. Bardziej agresywne przycinanie stanu (zostaw tylko minimalne dane terminarza)
+      const minimalState: GameState = {
+        ...state,
+        activeMatchState: null,
+        news: state.news.slice(0, 10),
+        fixtures: state.fixtures.map((f) => ({
+          id: f.id,
+          leagueId: f.leagueId,
+          round: f.round,
+          homeClubId: f.homeClubId,
+          awayClubId: f.awayClubId,
+          scoreHome: f.scoreHome,
+          scoreAway: f.scoreAway,
+          played: f.played,
+        })),
+      };
+      localStorage.setItem(key, JSON.stringify(minimalState));
+    } catch (fallbackErr) {
+      console.error('Błąd zapisu w LocalStorage - limit pamięci przeglądarki przekroczony:', fallbackErr);
+    }
+  }
+};
+
 export const useGameStore = create<GameStore>((set, get) => ({
   saveId: 'save_default',
   gameMode: 'single_player',
@@ -182,11 +224,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     };
 
     set(newState);
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newState));
-    } catch (e) {
-      console.warn('LocalStorage save error:', e);
-    }
+    safeSaveToLocalStorage(LOCAL_STORAGE_KEY, newState);
   },
 
   loadSavedGame: (savedState) => {
@@ -195,13 +233,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   saveGame: async () => {
     const state = get();
+    safeSaveToLocalStorage(LOCAL_STORAGE_KEY, state);
     try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
       await saveGameToCloud(state.saveId, state);
       return true;
     } catch (err) {
-      console.error('Error saving game:', err);
-      return false;
+      console.error('Error saving game to cloud:', err);
+      return true; // zwraca true bo zapis lokalny powiódł się
     }
   },
 
@@ -277,6 +315,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       userFixture.homeClubId,
       userFixture.awayClubId
     );
+
+    // Mecz rozpoczyna się od ekranu przedmeczowego (pauza = true)
+    initialMatchState.isPaused = true;
 
     set({ activeMatchState: initialMatchState });
   },

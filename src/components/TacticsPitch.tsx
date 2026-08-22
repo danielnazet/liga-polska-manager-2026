@@ -3,7 +3,15 @@
 import React, { useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { Player, Formation, Mentality, Aggression, Position } from '@/types';
-import { Shield, Zap, Flame, UserCheck, RefreshCw, Activity, HeartPulse } from 'lucide-react';
+import {
+  Shield,
+  Zap,
+  UserCheck,
+  Users,
+  Target,
+  Crown,
+  CornerDownRight
+} from 'lucide-react';
 
 export const TacticsPitch: React.FC = () => {
   const {
@@ -15,16 +23,18 @@ export const TacticsPitch: React.FC = () => {
     swapPlayers,
   } = useGameStore();
 
+  const [subTab, setSubTab] = useState<'squad' | 'tactics' | 'setpieces'>('squad');
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+
   const activeManager = managers[activeManagerIndex - 1] || managers[0];
   const activeClub = activeManager ? clubs[activeManager.clubId] : null;
 
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-
-  if (!activeClub) return <div className="text-white p-6">Wybierz klub</div>;
+  if (!activeClub) return <div className="text-white p-4">Wybierz klub</div>;
 
   const tactics = activeClub.tactics;
   const startingPlayers = tactics.startingIds.map((id) => players[id]).filter(Boolean);
   const benchPlayers = tactics.benchIds.map((id) => players[id]).filter(Boolean);
+  const allClubPlayers = Object.values(players).filter((p) => p.clubId === activeClub.id);
 
   const handlePlayerClick = (playerId: string) => {
     if (!selectedPlayerId) {
@@ -32,21 +42,34 @@ export const TacticsPitch: React.FC = () => {
     } else if (selectedPlayerId === playerId) {
       setSelectedPlayerId(null);
     } else {
-      // Zamiana zawodników
       swapPlayers(activeClub.id, selectedPlayerId, playerId);
       setSelectedPlayerId(null);
     }
   };
 
-  // Pozycje na boisku dla różnych formacji (w procentach X, Y)
+  const getDetailedPositionLabel = (p: Player, idx: number) => {
+    if (p.position === 'BR') return 'BR (Bramkarz)';
+    if (p.position === 'OB') {
+      if (idx === 1) return 'OL (Lewy obrońca)';
+      if (idx === 4) return 'OP (Prawy obrońca)';
+      return 'OŚ (Środkowy obrońca)';
+    }
+    if (p.position === 'PO') {
+      if (idx === 5) return 'PL (Lewy pomocnik)';
+      if (idx === 8) return 'PP (Prawy pomocnik)';
+      return 'PŚ (Środkowy pomocnik)';
+    }
+    return 'NŚ (Napastnik)';
+  };
+
   const getFormationCoordinates = (formation: Formation): { x: number; y: number; pos: Position }[] => {
     switch (formation) {
       case '4-4-2':
         return [
-          { x: 50, y: 88, pos: 'BR' }, // GK
-          { x: 18, y: 70, pos: 'OB' }, { x: 38, y: 72, pos: 'OB' }, { x: 62, y: 72, pos: 'OB' }, { x: 82, y: 70, pos: 'OB' }, // DEF
-          { x: 18, y: 45, pos: 'PO' }, { x: 38, y: 48, pos: 'PO' }, { x: 62, y: 48, pos: 'PO' }, { x: 82, y: 45, pos: 'PO' }, // MID
-          { x: 35, y: 20, pos: 'NA' }, { x: 65, y: 20, pos: 'NA' }, // FWD
+          { x: 50, y: 88, pos: 'BR' },
+          { x: 18, y: 70, pos: 'OB' }, { x: 38, y: 72, pos: 'OB' }, { x: 62, y: 72, pos: 'OB' }, { x: 82, y: 70, pos: 'OB' },
+          { x: 18, y: 45, pos: 'PO' }, { x: 38, y: 48, pos: 'PO' }, { x: 62, y: 48, pos: 'PO' }, { x: 82, y: 45, pos: 'PO' },
+          { x: 35, y: 20, pos: 'NA' }, { x: 65, y: 20, pos: 'NA' },
         ];
       case '4-3-3':
         return [
@@ -105,230 +128,380 @@ export const TacticsPitch: React.FC = () => {
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      {/* Lewa kolumna: Interaktywne Boisko */}
-      <div className="lg:col-span-7 flex flex-col gap-4">
-        {/* Pasek ustawień taktycznych */}
-        <div className="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Formacja:</span>
-            <div className="flex gap-1">
-              {formationsList.map((f) => (
-                <button
-                  key={f}
-                  onClick={() => updateTactics(activeClub.id, { formation: f })}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                    tactics.formation === f
-                      ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
+    <div className="flex flex-col gap-4 leading-tight text-slate-100 font-sans">
+      {/* NAGŁÓWEK PODZAKŁADEK */}
+      <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-3 shadow-md flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <button
+            onClick={() => setSubTab('squad')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              subTab === 'squad'
+                ? 'bg-emerald-600 text-white shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Skład ({allClubPlayers.length})</span>
+          </button>
+
+          <button
+            onClick={() => setSubTab('tactics')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              subTab === 'tactics'
+                ? 'bg-emerald-600 text-white shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Taktyka & Boisko</span>
+          </button>
+
+          <button
+            onClick={() => setSubTab('setpieces')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              subTab === 'setpieces'
+                ? 'bg-emerald-600 text-white shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Target className="w-3.5 h-3.5" />
+            <span>Stałe Fragmenty</span>
+          </button>
+        </div>
+
+        <div className="text-xs text-slate-400 font-semibold flex items-center gap-2">
+          <span>Wyjściowa XI: <strong className="text-emerald-400 font-black">{startingPlayers.length} / 11</strong></span>
+          <span>•</span>
+          <span>Ławka: <strong className="text-amber-400 font-black">{benchPlayers.length}</strong></span>
+        </div>
+      </div>
+
+      {/* 1. SKŁAD ZESPOŁU */}
+      {subTab === 'squad' && (
+        <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-4 shadow-md flex flex-col gap-3">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+            <h2 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+              <Users className="w-4 h-4 text-emerald-400" />
+              Kadra Zespołu ({allClubPlayers.length} zawodników)
+            </h2>
+            <span className="text-[11px] text-slate-400">Kliknij zawodnika, aby zamienić miejsce</span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs leading-tight">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                  <th className="py-2 px-2">Rola</th>
+                  <th className="py-2 px-2">Poz. Dokładna</th>
+                  <th className="py-2 px-3">Zawodnik</th>
+                  <th className="py-2 px-2 text-center">Wiek</th>
+                  <th className="py-2 px-2 text-center font-black text-emerald-400">OVR</th>
+                  <th className="py-2 px-2 text-center">Forma</th>
+                  <th className="py-2 px-2 text-center">Kondycja</th>
+                  <th className="py-2 px-3 text-right">Pensja / tydz.</th>
+                  <th className="py-2 px-2 text-center">Akcja</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-medium">
+                {allClubPlayers
+                  .sort((a, b) => {
+                    const isStartingA = tactics.startingIds.includes(a.id);
+                    const isStartingB = tactics.startingIds.includes(b.id);
+                    if (isStartingA && !isStartingB) return -1;
+                    if (!isStartingA && isStartingB) return 1;
+                    return b.overall - a.overall;
+                  })
+                  .map((player, idx) => {
+                    const isStarting = tactics.startingIds.includes(player.id);
+                    const isBench = tactics.benchIds.includes(player.id);
+                    const isSelected = selectedPlayerId === player.id;
+                    const detailedPos = getDetailedPositionLabel(player, idx);
+
+                    return (
+                      <tr
+                        key={player.id}
+                        onClick={() => handlePlayerClick(player.id)}
+                        className={`cursor-pointer transition-all ${
+                          isSelected
+                            ? 'bg-amber-500/20 border-l-4 border-amber-400 text-white font-bold'
+                            : isStarting
+                            ? 'bg-emerald-950/30 hover:bg-emerald-900/40 text-white'
+                            : isBench
+                            ? 'bg-slate-950/40 hover:bg-slate-800/40 text-slate-300'
+                            : 'hover:bg-slate-800/30 text-slate-400'
+                        }`}
+                      >
+                        <td className="py-2 px-2">
+                          {isStarting ? (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                              XI
+                            </span>
+                          ) : isBench ? (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                              Ławka
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] text-slate-500 bg-slate-800">
+                              Rezerwa
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-2 px-2">
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300">
+                            {detailedPos}
+                          </span>
+                        </td>
+
+                        <td className="py-2 px-3">
+                          <span className="font-bold text-white">
+                            {player.firstName} {player.lastName}
+                          </span>
+                        </td>
+
+                        <td className="py-2 px-2 text-center text-slate-300">{player.age}</td>
+
+                        <td className="py-2 px-2 text-center font-black text-emerald-400">
+                          {player.overall}
+                        </td>
+
+                        <td className="py-2 px-2 text-center text-slate-300">
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800">
+                            🔥 {player.form}/10
+                          </span>
+                        </td>
+
+                        <td className="py-2 px-2 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <div className="w-14 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full ${
+                                  player.condition > 75
+                                    ? 'bg-emerald-400'
+                                    : player.condition > 50
+                                    ? 'bg-amber-400'
+                                    : 'bg-red-500'
+                                }`}
+                                style={{ width: `${player.condition}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-300">
+                              {player.condition}%
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="py-2 px-3 text-right text-slate-300 font-semibold">
+                          {player.salary.toLocaleString('pl-PL')} PLN
+                        </td>
+
+                        <td className="py-2 px-2 text-center">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePlayerClick(player.id);
+                            }}
+                            className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold rounded transition-all"
+                          >
+                            {isSelected ? 'Anuluj' : 'Zamień'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 2. TAKTYKA */}
+      {subTab === 'tactics' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="lg:col-span-7 flex flex-col gap-3">
+            <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-400 uppercase">Formacja:</span>
+                <div className="flex gap-1">
+                  {formationsList.map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => updateTactics(activeClub.id, { formation: f })}
+                      className={`px-2.5 py-1 rounded text-xs font-bold transition-all ${
+                        tactics.formation === f
+                          ? 'bg-emerald-500 text-slate-950 shadow'
+                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="relative w-full aspect-[4/4.5] bg-emerald-950 rounded-2xl overflow-hidden border border-emerald-600/50 shadow-xl flex items-center justify-center select-none">
+              <div className="absolute inset-0 bg-gradient-to-b from-emerald-900/40 via-emerald-800/20 to-emerald-900/40 pointer-events-none" />
+              <div className="absolute inset-2 border border-white/30 rounded-lg pointer-events-none" />
+              <div className="absolute top-1/2 left-2 right-2 h-0.5 bg-white/30 pointer-events-none" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border border-white/30 rounded-full pointer-events-none" />
+
+              {startingPlayers.map((player, idx) => {
+                const coord = coordinates[idx] || { x: 50, y: 50, pos: player.position };
+                const isSelected = selectedPlayerId === player.id;
+
+                return (
+                  <div
+                    key={player.id}
+                    onClick={() => handlePlayerClick(player.id)}
+                    style={{ left: `${coord.x}%`, top: `${coord.y}%`, transform: 'translate(-50%, -50%)' }}
+                    className={`absolute cursor-pointer transition-all duration-200 ${
+                      isSelected ? 'scale-125 z-30' : 'hover:scale-110 hover:z-20'
+                    }`}
+                  >
+                    <div
+                      className={`flex flex-col items-center p-1 rounded-xl border backdrop-blur-md shadow transition-all ${
+                        isSelected
+                          ? 'bg-amber-500/90 border-amber-300 text-slate-950 ring-2 ring-amber-400'
+                          : 'bg-slate-900/85 border-slate-700 text-white hover:border-emerald-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="text-[9px] font-black px-1 rounded bg-slate-800 text-white">
+                          {player.position}
+                        </span>
+                        <span className="text-[10px] font-black text-emerald-400">
+                          {player.overall}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold truncate max-w-[75px] text-center mt-0.5">
+                        {player.lastName}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            {selectedPlayerId ? (
-              <span className="text-amber-400 font-semibold animate-pulse flex items-center gap-1">
-                <RefreshCw className="w-3.5 h-3.5" /> Wybierz drugiego gracza do zamiany
-              </span>
-            ) : (
-              <span>Kliknij gracza, aby go zamienić</span>
-            )}
-          </div>
-        </div>
+          <div className="lg:col-span-5 flex flex-col gap-4">
+            <div className="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 flex flex-col gap-3 shadow-md">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                Polecenia Taktyczne
+              </h3>
 
-        {/* Murawa boiska 2D */}
-        <div className="relative w-full aspect-[4/5] sm:aspect-[4/4.8] bg-emerald-950 rounded-2xl overflow-hidden border-2 border-emerald-600/50 shadow-2xl shadow-emerald-950/60 flex items-center justify-center select-none">
-          {/* Tło i linie boiska */}
-          <div className="absolute inset-0 bg-gradient-to-b from-emerald-900/40 via-emerald-800/20 to-emerald-900/40 pointer-events-none" />
-          {/* Pasy murawy */}
-          <div className="absolute inset-0 opacity-15 bg-[repeating-linear-gradient(0deg,#000,#000_30px,transparent_30px,transparent_60px)] pointer-events-none" />
-
-          {/* Linie boiska */}
-          <div className="absolute inset-4 border-2 border-white/30 rounded-xl pointer-events-none" />
-          <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-white/30 pointer-events-none" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 border-2 border-white/30 rounded-full pointer-events-none" />
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-48 h-20 border-b-2 border-x-2 border-white/30 pointer-events-none" />
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-48 h-20 border-t-2 border-x-2 border-white/30 pointer-events-none" />
-
-          {/* Karty zawodników na murawie */}
-          {startingPlayers.map((player, idx) => {
-            const coord = coordinates[idx] || { x: 50, y: 50, pos: player.position };
-            const isSelected = selectedPlayerId === player.id;
-
-            return (
-              <div
-                key={player.id}
-                onClick={() => handlePlayerClick(player.id)}
-                style={{
-                  left: `${coord.x}%`,
-                  top: `${coord.y}%`,
-                  transform: 'translate(-50%, -50%)',
-                }}
-                className={`absolute cursor-pointer transition-all duration-200 group z-10 ${
-                  isSelected ? 'scale-125 z-30' : 'hover:scale-110 hover:z-20'
-                }`}
-              >
-                <div
-                  className={`flex flex-col items-center p-1.5 rounded-xl border backdrop-blur-md shadow-lg transition-all ${
-                    isSelected
-                      ? 'bg-amber-500/90 border-amber-300 text-slate-950 ring-4 ring-amber-400/50'
-                      : 'bg-slate-900/85 border-slate-700 text-white hover:border-emerald-400'
-                  }`}
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Nastawienie taktyczne:</label>
+                <select
+                  value={tactics.mentality}
+                  onChange={(e) => updateTactics(activeClub.id, { mentality: e.target.value as Mentality })}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
                 >
-                  <div className="flex items-center gap-1">
-                    <span
-                      className={`text-[10px] font-black px-1 rounded ${
-                        player.position === 'BR'
-                          ? 'bg-amber-600 text-white'
-                          : player.position === 'OB'
-                          ? 'bg-blue-600 text-white'
-                          : player.position === 'PO'
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-red-600 text-white'
-                      }`}
-                    >
-                      {player.position}
-                    </span>
-                    <span className="text-xs font-black tracking-tighter text-emerald-400">
-                      {player.overall}
-                    </span>
-                  </div>
-
-                  <span className="text-[11px] font-bold truncate max-w-[80px] text-center mt-0.5">
-                    {player.lastName}
-                  </span>
-
-                  {/* Kondycja pasek */}
-                  <div className="w-12 h-1 bg-slate-700 rounded-full mt-1 overflow-hidden">
-                    <div
-                      className={`h-full ${
-                        player.condition > 75
-                          ? 'bg-emerald-400'
-                          : player.condition > 50
-                          ? 'bg-amber-400'
-                          : 'bg-red-500'
-                      }`}
-                      style={{ width: `${player.condition}%` }}
-                    />
-                  </div>
-                </div>
+                  {mentalitiesList.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
               </div>
-            );
-          })}
-        </div>
-      </div>
 
-      {/* Prawa kolumna: Ławka rezerwowych & Polecenia taktyczne */}
-      <div className="lg:col-span-5 flex flex-col gap-6">
-        {/* Nastawienie i Agresja */}
-        <div className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 flex flex-col gap-4 shadow-xl">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <Zap className="w-4 h-4 text-emerald-400" />
-            Polecenia Menedżera
-          </h3>
-
-          <div>
-            <label className="text-xs text-slate-400 block mb-1.5 font-medium">Nastawienie taktyczne:</label>
-            <select
-              value={tactics.mentality}
-              onChange={(e) => updateTactics(activeClub.id, { mentality: e.target.value as Mentality })}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-            >
-              {mentalitiesList.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs text-slate-400 block mb-1.5 font-medium">Agresywność i pressing:</label>
-            <select
-              value={tactics.aggression}
-              onChange={(e) => updateTactics(activeClub.id, { aggression: e.target.value as Aggression })}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-            >
-              {aggressionsList.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Ławka rezerwowych */}
-        <div className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 flex flex-col gap-3 shadow-xl">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-amber-400" />
-              Ławka Rezerwowych ({benchPlayers.length})
-            </h3>
-            <span className="text-xs text-slate-400">Kliknij, aby podmienić</span>
-          </div>
-
-          <div className="flex flex-col gap-2 max-h-[360px] overflow-y-auto pr-1">
-            {benchPlayers.map((player) => {
-              const isSelected = selectedPlayerId === player.id;
-              return (
-                <div
-                  key={player.id}
-                  onClick={() => handlePlayerClick(player.id)}
-                  className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
-                    isSelected
-                      ? 'bg-amber-500/20 border-amber-400 text-white shadow-md'
-                      : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-600 hover:bg-slate-800/50'
-                  }`}
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Agresywność i pressing:</label>
+                <select
+                  value={tactics.aggression}
+                  onChange={(e) => updateTactics(activeClub.id, { aggression: e.target.value as Aggression })}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <span
-                      className={`text-xs font-black px-1.5 py-0.5 rounded ${
-                        player.position === 'BR'
-                          ? 'bg-amber-600 text-white'
-                          : player.position === 'OB'
-                          ? 'bg-blue-600 text-white'
-                          : player.position === 'PO'
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-red-600 text-white'
-                      }`}
-                    >
-                      {player.position}
-                    </span>
-                    <div>
-                      <div className="text-xs font-bold text-white">
-                        {player.firstName} {player.lastName}
-                      </div>
-                      <div className="text-[10px] text-slate-400 flex items-center gap-2">
-                        <span>Wiek: {player.age}</span>
-                        <span>•</span>
-                        <span className="text-emerald-400">OVR: {player.overall}</span>
-                      </div>
-                    </div>
-                  </div>
+                  {aggressionsList.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                        <HeartPulse className="w-3 h-3 text-red-400" />
-                        <span>{player.condition}%</span>
-                      </div>
-                      <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                        <Activity className="w-3 h-3 text-amber-400" />
-                        <span>Forma: {player.form}/10</span>
-                      </div>
-                    </div>
+            <div className="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 flex flex-col gap-2 shadow-md">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <UserCheck className="w-3.5 h-3.5 text-amber-400" />
+                Ławka Rezerwowych ({benchPlayers.length})
+              </h3>
+              <div className="flex flex-col gap-1.5 max-h-60 overflow-y-auto pr-1">
+                {benchPlayers.map((player) => (
+                  <div
+                    key={player.id}
+                    onClick={() => handlePlayerClick(player.id)}
+                    className="flex items-center justify-between p-2 rounded-xl border border-slate-800 bg-slate-950/60 text-slate-300 cursor-pointer hover:border-slate-600 text-xs"
+                  >
+                    <span className="font-bold text-white">{player.firstName} {player.lastName}</span>
+                    <span className="text-emerald-400 font-bold">OVR {player.overall}</span>
                   </div>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* 3. STAŁE FRAGMENTY */}
+      {subTab === 'setpieces' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-4 shadow-md flex flex-col gap-3">
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+              <Crown className="w-4 h-4 text-amber-400" />
+              <h3 className="text-xs font-black text-white uppercase">Kapitan Zespołu</h3>
+            </div>
+            <select
+              value={tactics.captainId || startingPlayers[0]?.id || ''}
+              onChange={(e) => updateTactics(activeClub.id, { captainId: e.target.value })}
+              className="bg-slate-950 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+            >
+              {startingPlayers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.firstName} {p.lastName} (OVR: {p.overall})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-4 shadow-md flex flex-col gap-3">
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+              <Target className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-xs font-black text-white uppercase">Wykonawca Karnych</h3>
+            </div>
+            <select
+              value={tactics.penaltyTakerId || startingPlayers[startingPlayers.length - 1]?.id || ''}
+              onChange={(e) => updateTactics(activeClub.id, { penaltyTakerId: e.target.value })}
+              className="bg-slate-950 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+            >
+              {startingPlayers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.firstName} {p.lastName} (Wykańczanie: {p.scoring})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-4 shadow-md flex flex-col gap-3">
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+              <CornerDownRight className="w-4 h-4 text-blue-400" />
+              <h3 className="text-xs font-black text-white uppercase">Wolne i Rożne</h3>
+            </div>
+            <select
+              value={tactics.freeKickTakerId || startingPlayers[1]?.id || ''}
+              onChange={(e) => updateTactics(activeClub.id, { freeKickTakerId: e.target.value })}
+              className="bg-slate-950 border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+            >
+              {startingPlayers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.firstName} {p.lastName} (Rozgrywanie: {p.playmaking})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
